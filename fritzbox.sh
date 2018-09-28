@@ -50,7 +50,7 @@ else
     METRICS[19]="RX Uncorrectable Errors"
     METRICS[28]="TX Channel"
     METRICS[29]="TX Frequency"
-    METRICS[30]="TX Modulation QAM"    
+    METRICS[30]="TX Modulation QAM"
     METRICS[32]="TX Power Level"
     
     UNITS[18]=c
@@ -73,10 +73,10 @@ else
 		if [ "${LINEARRAY[$CHANNELINDEX]+isset}" ]; then
 		    VALUE=$(echo "${LINEARRAY[$CHANNELINDEX]}" | grep -Eo "[0-9]*\.?[0-9]*" )
 		    if [ "${CRIT_LOWER[$LINENUMBER]+isset}" ]   && lower   "${CRIT_LOWER[$LINENUMBER]}" "$VALUE"; then
-			OUTPUT="$OUTPUT CRITICAL: Upper Limit ${CRIT_LOWER[$LINENUMBER]} is >> than"
+			OUTPUT="$OUTPUT CRITICAL: Lower Limit ${CRIT_LOWER[$LINENUMBER]} is >> than"
 			CRITICAL=1
 		    elif [ "${CRIT_UPPER[$LINENUMBER]+isset}" ] && greater "${CRIT_UPPER[$LINENUMBER]}" "$VALUE"; then
-			OUTPUT="$OUTPUT CRITICAL: Lower Limit ${CRIT_UPPER[$LINENUMBER]} is << than"
+			OUTPUT="$OUTPUT CRITICAL: Upper Limit ${CRIT_UPPER[$LINENUMBER]} is << than"
 			CRITICAL=1
 		    elif [ "${WARN_LOWER[$LINENUMBER]+isset}" ] && lower   "${WARN_LOWER[$LINENUMBER]}" "$VALUE"; then
 			OUTPUT="$OUTPUT WARNING: Lower Limit ${WARN_LOWER[$LINENUMBER]} is > than"
