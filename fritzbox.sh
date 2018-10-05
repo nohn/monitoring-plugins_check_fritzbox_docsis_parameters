@@ -7,7 +7,7 @@ SID=$(cat /tmp/fritzbox-sid.txt)
 
 greater()
 {
-    if [ $(echo "$1>$2"| bc) -eq 0 ]; then
+    if [ $(echo "$1=>$2"| bc) -eq 0 ]; then
 	return 0
     else
 	return 1
@@ -16,7 +16,7 @@ greater()
 
 lower()
 {
-    if [ $(echo "$1<$2"| bc) -eq 0 ]; then
+    if [ $(echo "$1<=$2"| bc) -eq 0 ]; then
 	return 0
     else
 	return 1
