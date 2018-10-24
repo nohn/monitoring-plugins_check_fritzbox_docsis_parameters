@@ -4,8 +4,10 @@ Icinga/Nagios Check for DOCSIS Parameters on a Fritzbox Cable
 Modem/Router. Perfdata is enabled, so given that you are using
 something like PNP4Nagios, nice graphs will be drawn.
 
-Requires curl, html2text, bc. Rename config.dist.sh to config.sh and
-adjust configuration to suit your needs.
+Requires curl, html2text, bc, jq.
+
+Rename config.dist.sh to config.sh and adjust configuration to suit
+your needs.
 
 Icinga config could look like this:
 
