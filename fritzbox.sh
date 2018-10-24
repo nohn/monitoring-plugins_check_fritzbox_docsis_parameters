@@ -3,7 +3,7 @@
 . ./config.sh
 
 # Below be dragons
-SID=$(cat /tmp/fritzbox-sid.txt)
+SID=$(cat /tmp/icinga-fritzbox-$HOST-sid.txt)
 
 greater()
 {
@@ -23,20 +23,64 @@ lower()
     fi
 }
 
-curl -sk "https://$HOST/internet/docsis_info.lua?update=uiInfo&sid=$SID&xhr=1&t1537694807848=nocache" | html2text | sed "s@\xA0@@g" | sed "s@\xC2@@g"  > /tmp/fritzbox.txt
+status_unknown()
+{
+    echo $1
+    exit 3
+}
 
-if [ ! -s /tmp/fritzbox.txt ]; then
+curl -sk "https://$HOST/internet/docsis_overview.lua?sid=$SID&update=&xhr=1&t1540371669938=nocache" > /tmp/icinga-fritzbox-$HOST-general.json
+curl -sk "https://$HOST/internet/docsis_info.lua?update=uiInfo&sid=$SID&xhr=1&t1537694807848=nocache" | html2text | sed "s@\xA0@@g" | sed "s@\xC2@@g"  > /tmp/icinga-fritzbox-$HOST-channels.html
+
+if [ ! -s /tmp/icinga-fritzbox-$HOST-channels.html ]; then
     FRITZLOGINCHALLENGE=$(curl -sk "https://$HOST/login_sid.lua" |  grep -o "<Challenge>[a-z0-9]\{8\}" | cut -d ">" -f 2)
     FRITZLOGINHASH=$(echo -n "$FRITZLOGINCHALLENGE-$PASS" | sed -e "s@.@&\n@g" | tr "\n" "\0" | md5sum | grep -o "[0-9a-z]\{32\}")
     SID=$(curl -sk "https://$HOST/login_sid.lua" -d "response=$FRITZLOGINCHALLENGE-$FRITZLOGINHASH" -d "username=$USER" | grep -o "<SID>[a-z0-9]\{16\}" |  cut -d ">" -f 2)
-    echo "$SID" > /tmp/fritzbox-sid.txt
-    curl -sk "https://$HOST/internet/docsis_info.lua?update=uiInfo&sid=$SID&xhr=1&t1537694807848=nocache" | html2text | sed "s@\xA0@@g" | sed "s@\xC2@@g"  > /tmp/fritzbox.txt
+    echo "$SID" > /tmp/icinga-fritzbox-$HOST-sid.txt
+    curl -sk "https://$HOST/internet/docsis_overview.lua?sid=$SID&update=&xhr=1&t1540371669938=nocache" > /tmp/icinga-fritzbox-$HOST-general.json
+    curl -sk "https://$HOST/internet/docsis_info.lua?update=uiInfo&sid=$SID&xhr=1&t1537694807848=nocache" | html2text | sed "s@\xA0@@g" | sed "s@\xC2@@g"  > /tmp/icinga-fritzbox-$HOST-channels.html
 fi
 
-if [ ! -s /tmp/fritzbox.txt ]; then
-    echo "CRITICAL! No Data found"
-    exit 1
+if [ ! -s /tmp/icinga-fritzbox-$HOST-channels.html ] || [ ! -s /tmp/icinga-fritzbox-$HOST-general.json ]; then
+    status_unknown "CRITICAL! No Data found"
 else
+    NUMDSCHANNELS=$(cat /tmp/icinga-fritzbox-$HOST-general.json | jq -r '.ds_count')
+    NUMUSCHANNELS=$(cat /tmp/icinga-fritzbox-$HOST-general.json | jq -r '.us_count')
+    DOCSISVERSION=$(cat /tmp/icinga-fritzbox-$HOST-general.json | jq -rc '.stateTxt[] | select(contains("DOCSIS"))')
+
+    # Thresholds for RX SNR MSE
+    CRIT_LOWER[16]=30.1
+    WARN_LOWER[16]=32.1
+    if echo $DOCSISVERSION | grep -q "DOCSIS 3.0"; then
+	# Thresholds for RX Power Level
+	# In fact, these values depend on the QAM, using 256QAM
+	# thresholds here. 64QAM is more tolerant...
+	CRIT_LOWER[15]=-7.9
+	WARN_LOWER[15]=-5.9
+	WARN_UPPER[15]=18
+	CRIT_UPPER[15]=20
+	# Thresholds for TX Power Level
+	CRIT_LOWER[32]=35.1
+	WARN_LOWER[32]=37.1
+	WARN_UPPER[32]=51
+	CRIT_UPPER[32]=53
+    elif echo $DOCSISVERSION | grep -q "DOCSIS 3.1"; then
+	# Thresholds for RX Power Level
+	# In fact, these values depend on the QAM, using 4096QAM
+	# thresholds here. 2048QAM and 1024 QAM are more tolerant...
+	CRIT_LOWER[15]=-1.9
+	WARN_LOWER[15]=0.1
+	WARN_UPPER[15]=24
+	CRIT_UPPER[15]=26
+	# Thresholds for TX Power Level
+	CRIT_LOWER[32]=38.1
+	WARN_LOWER[32]=40.1
+	WARN_UPPER[32]=48
+	CRIT_UPPER[32]=50
+    else
+	status_unknown "$DOCSISVERSION is unknown to me."
+    fi
+
     FPING=$(fping -c 10 -o -q 8.8.8.8 2>&1)
     PACKETLOSS=$(echo "$FPING" | cut -d "/" -f 5 | cut -d "," -f 1)
     
@@ -93,7 +137,7 @@ else
 	    	CSV="$CSV;$VALUE"
     	    done
 	fi
-    done < /tmp/fritzbox.txt
+    done < /tmp/icinga-fritzbox-$HOST-channels.html
     
     echo "$OUTPUT |$PERFDATA"
     if [ ! -z "$CSVOUT" ]; then
