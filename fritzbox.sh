@@ -7,18 +7,18 @@
 greater()
 {
     if [ $(echo "$1>=$2"| bc) -eq 0 ]; then
-	return 0
+        return 0
     else
-	return 1
+        return 1
     fi
 }
 
 lower()
 {
     if [ $(echo "$1<=$2"| bc) -eq 0 ]; then
-	return 0
+        return 0
     else
-	return 1
+        return 1
     fi
 }
 
@@ -125,32 +125,32 @@ while read -r LINE; do
     LINENUMBER=$((LINENUMBER+1))
     METRIC=${METRICS[$LINENUMBER]}
     if [ ! -z "$METRIC" ]; then
-	OUTPUT="$OUTPUT $METRIC:"
-	IFS=" " read -r -a LINEARRAY <<< "$LINE"
-	for CHANNEL in $(seq 1 "$MAX_CHANNELS"); do
-	    CHANNELINDEX=$((CHANNEL-1))
-	    if [ "${LINEARRAY[$CHANNELINDEX]+isset}" ]; then
-		VALUE=$(echo "${LINEARRAY[$CHANNELINDEX]}" | grep -Eo "[0-9]*\.?[0-9]*" )
-		if [ "${CRIT_LOWER[$LINENUMBER]+isset}" ]   && lower   "${CRIT_LOWER[$LINENUMBER]}" "$VALUE"; then
-		    OUTPUT="$OUTPUT CRITICAL: Lower Limit ${CRIT_LOWER[$LINENUMBER]} is >> than"
-		    CRITICAL=1
-		elif [ "${CRIT_UPPER[$LINENUMBER]+isset}" ] && greater "${CRIT_UPPER[$LINENUMBER]}" "$VALUE"; then
-		    OUTPUT="$OUTPUT CRITICAL: Upper Limit ${CRIT_UPPER[$LINENUMBER]} is << than"
-		    CRITICAL=1
-		elif [ "${WARN_LOWER[$LINENUMBER]+isset}" ] && lower   "${WARN_LOWER[$LINENUMBER]}" "$VALUE"; then
-		    OUTPUT="$OUTPUT WARNING: Lower Limit ${WARN_LOWER[$LINENUMBER]} is > than"
-		    WARNING=1
-		elif [ "${WARN_UPPER[$LINENUMBER]+isset}" ] && greater "${WARN_UPPER[$LINENUMBER]}" "$VALUE"; then
-		    OUTPUT="$OUTPUT WARNING: Upper Limit ${WARN_UPPER[$LINENUMBER]} is < than"
-		    WARNING=1
-		fi
-	    else
-		VALUE=0
-	    fi
-	    OUTPUT="$OUTPUT $VALUE"
-    	    PERFDATA="$PERFDATA '${METRIC} ${CHANNEL}'=$VALUE${UNITS[$LINENUMBER]}"
-	    CSV="$CSV;$VALUE"
-    	done
+        OUTPUT="$OUTPUT $METRIC:"
+        IFS=" " read -r -a LINEARRAY <<< "$LINE"
+        for CHANNEL in $(seq 1 "$MAX_CHANNELS"); do
+            CHANNELINDEX=$((CHANNEL-1))
+            if [ "${LINEARRAY[$CHANNELINDEX]+isset}" ]; then
+                VALUE=$(echo "${LINEARRAY[$CHANNELINDEX]}" | grep -Eo "[0-9]*\.?[0-9]*" )
+                if [ "${CRIT_LOWER[$LINENUMBER]+isset}" ]   && lower   "${CRIT_LOWER[$LINENUMBER]}" "$VALUE"; then
+                    OUTPUT="$OUTPUT CRITICAL: Lower Limit ${CRIT_LOWER[$LINENUMBER]} is >> than"
+                    CRITICAL=1
+                elif [ "${CRIT_UPPER[$LINENUMBER]+isset}" ] && greater "${CRIT_UPPER[$LINENUMBER]}" "$VALUE"; then
+                    OUTPUT="$OUTPUT CRITICAL: Upper Limit ${CRIT_UPPER[$LINENUMBER]} is << than"
+                    CRITICAL=1
+                elif [ "${WARN_LOWER[$LINENUMBER]+isset}" ] && lower   "${WARN_LOWER[$LINENUMBER]}" "$VALUE"; then
+                    OUTPUT="$OUTPUT WARNING: Lower Limit ${WARN_LOWER[$LINENUMBER]} is > than"
+                    WARNING=1
+                elif [ "${WARN_UPPER[$LINENUMBER]+isset}" ] && greater "${WARN_UPPER[$LINENUMBER]}" "$VALUE"; then
+                    OUTPUT="$OUTPUT WARNING: Upper Limit ${WARN_UPPER[$LINENUMBER]} is < than"
+                    WARNING=1
+                fi
+            else
+                VALUE=0
+            fi
+            OUTPUT="$OUTPUT $VALUE"
+            PERFDATA="$PERFDATA '${METRIC} ${CHANNEL}'=$VALUE${UNITS[$LINENUMBER]}"
+            CSV="$CSV;$VALUE"
+        done
     fi
 done < /tmp/icinga-fritzbox-$HOST-channels.html
 
