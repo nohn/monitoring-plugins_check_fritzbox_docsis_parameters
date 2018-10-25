@@ -10,4 +10,4 @@ MAX_CHANNELS=4
 CRIT_LOWER[19]=10
 WARN_LOWER[19]=5
 # Optionally log values to a CSV file
-CSVOUT="/path/to/fritzbox.csv"
+# CSVOUT="/path/to/fritzbox.csv"

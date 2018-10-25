@@ -1,8 +1,17 @@
 # monitoring-plugins_check_fritzbox_docsis_parameters
 
 Icinga/Nagios Check for DOCSIS Parameters on a Fritzbox Cable
-Modem/Router. Perfdata is enabled, so given that you are using
-something like PNP4Nagios, nice graphs will be drawn.
+Modem/Router.
+
+Works with Fritzbox Cable Routers running EuroDOCSIS/DOCSIS versions
+3.0 and 3.1. OK/WARNING/CRITICAL thresholds are currently hard coded
+for 256QAM when operating DOCSIS 3.0 and 4096QAM when operating DOCSIS
+3.1.
+
+Perfdata is enabled, so given that you are using something like
+PNP4Nagios, nice graphs will be drawn.
+
+Optionally you can also dump the values to a CSV file.
 
 Requires curl, html2text, bc, jq.
 
