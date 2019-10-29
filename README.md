@@ -22,7 +22,7 @@ Icinga config could look like this:
 
     define command{
         command_name check_docsis
-        command_line /path/to/fritzbox.sh
+        command_line /path/to/check_fritzbox_docsis
     }
 
     define service {
