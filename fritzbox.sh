@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 
-. ./config.sh
+. ./check_fritzbox.config.sh
 
 if [ "$DEBUG" == "true" ]; then
     set -x
