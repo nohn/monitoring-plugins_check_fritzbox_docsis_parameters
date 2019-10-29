@@ -2,6 +2,8 @@
 HOST="fritz.box"
 USER="user"
 PASS="password"
+# Debug Mode
+DEBUG=false
 # Your Mileage may vary. Fritzbox 6360 has 4 Channels. RRDTools sucks
 # with dynamic number of data sources, so use a fixed number of
 # channels here.

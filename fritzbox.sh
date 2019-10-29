@@ -2,6 +2,10 @@
 
 . ./config.sh
 
+if [ "$DEBUG" == "true" ]; then
+    set -x
+fi
+
 # Below be dragons
 
 greater()
@@ -63,27 +67,27 @@ DOCSISVERSION=$(cat /tmp/icinga-fritzbox-$HOST-general.json | jq -rc '.stateTxt[
 CRIT_LOWER[16]=30.1
 WARN_LOWER[16]=32.1
 if echo $DOCSISVERSION | grep -q "DOCSIS 3.0"; then
-    # Thresholds for RX Power Level
+    # Thresholds for RX Power Level in dB(mV)
     # In fact, these values depend on the QAM, using 256QAM
     # thresholds here. 64QAM is more tolerant...
     CRIT_LOWER[15]=-7.9
     WARN_LOWER[15]=-5.9
     WARN_UPPER[15]=18
     CRIT_UPPER[15]=20
-    # Thresholds for TX Power Level
+    # Thresholds for TX Power Level in dB(mV)
     CRIT_LOWER[32]=35.1
     WARN_LOWER[32]=37.1
     WARN_UPPER[32]=51
     CRIT_UPPER[32]=53
 elif echo $DOCSISVERSION | grep -q "DOCSIS 3.1"; then
-    # Thresholds for RX Power Level
+    # Thresholds for RX Power Level in dB(mV)
     # In fact, these values depend on the QAM, using 4096QAM
     # thresholds here. 2048QAM and 1024 QAM are more tolerant...
     CRIT_LOWER[15]=-1.9
     WARN_LOWER[15]=0.1
     WARN_UPPER[15]=24
     CRIT_UPPER[15]=26
-    # Thresholds for TX Power Level
+    # Thresholds for TX Power Level in dB(mV)
     CRIT_LOWER[32]=38.1
     WARN_LOWER[32]=40.1
     WARN_UPPER[32]=48
