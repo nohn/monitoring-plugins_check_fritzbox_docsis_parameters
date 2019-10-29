@@ -1,46 +1,9 @@
 #!/usr/bin/env bash
 
 . ./check_fritzbox.config.sh
+. ./check_fritzbox.functions.sh
 
-if [ "$DEBUG" == "true" ]; then
-    set -x
-fi
-
-# Below be dragons
-
-greater()
-{
-    if [ $(echo "$1>=$2"| bc) -eq 0 ]; then
-        return 0
-    else
-        return 1
-    fi
-}
-
-lower()
-{
-    if [ $(echo "$1<=$2"| bc) -eq 0 ]; then
-        return 0
-    else
-        return 1
-    fi
-}
-
-status_unknown()
-{
-    echo $1
-    exit 3
-}
-
-login()
-{
-    FRITZLOGINCHALLENGE=$(curl -sk "https://$HOST/login_sid.lua" |  grep -o "<Challenge>[a-z0-9]\{8\}" | cut -d ">" -f 2)
-    FRITZLOGINHASH=$(echo -n "$FRITZLOGINCHALLENGE-$PASS" | sed -e "s@.@&\n@g" | tr "\n" "\0" | md5sum | grep -o "[0-9a-z]\{32\}")
-    SID=$(curl -sk "https://$HOST/login_sid.lua" -d "response=$FRITZLOGINCHALLENGE-$FRITZLOGINHASH" -d "username=$USER" | grep -o "<SID>[a-z0-9]\{16\}" |  cut -d ">" -f 2)
-    echo "$SID" > /tmp/icinga-fritzbox-$HOST-sid.txt
-}
-
-fetch_data()
+fetch_docsis_data()
 {
     curl -sk "https://$HOST/internet/docsis_overview.lua?sid=$SID&update=&xhr=1&t1540371669938=nocache" > /tmp/icinga-fritzbox-$HOST-general.json
     curl -sk "https://$HOST/internet/docsis_info.lua?update=uiInfo&sid=$SID&xhr=1&t1537694807848=nocache" | html2text | sed "s@\xA0@@g" | sed "s@\xC2@@g"  > /tmp/icinga-fritzbox-$HOST-channels.html
@@ -52,11 +15,11 @@ else
     SID=$(cat /tmp/icinga-fritzbox-$HOST-sid.txt)
 fi
 
-fetch_data
+fetch_docsis_data
 
 if [ ! -s /tmp/icinga-fritzbox-$HOST-channels.html ] || [ ! -s /tmp/icinga-fritzbox-$HOST-general.json ]; then
     login
-    fetch_data
+    fetch_docsis_data
 fi
 
 NUMDSCHANNELS=$(cat /tmp/icinga-fritzbox-$HOST-general.json | jq -r '.ds_count')
