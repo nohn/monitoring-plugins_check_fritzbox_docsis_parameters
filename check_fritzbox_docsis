@@ -5,8 +5,11 @@
 
 fetch_docsis_data()
 {
+    curl -sk "https://$HOST/data.lua?sid=$SID&update=&xhr=1&t1540371669938=nocache" > /tmp/icinga-fritzbox-$HOST-data.json
     curl -sk "https://$HOST/internet/docsis_overview.lua?sid=$SID&update=&xhr=1&t1540371669938=nocache" > /tmp/icinga-fritzbox-$HOST-general.json
     curl -sk "https://$HOST/internet/docsis_info.lua?update=uiInfo&sid=$SID&xhr=1&t1537694807848=nocache" | html2text | sed "s@\xA0@@g" | sed "s@\xC2@@g"  > /tmp/icinga-fritzbox-$HOST-channels.html
+    # curl -sk "https://$HOST/internet/docsis_info.lua?update=uiInfo_ds&sid=$SID&useajax=1&xhr=1&t1586064147210=nocache" | html2text | sed "s@\xA0@@g" | sed "s@\xC2@@g"  > /tmp/icinga-fritzbox-$HOST-channels_rx.html
+    # curl -sk "https://$HOST/internet/docsis_info.lua?update=uiInfo_us&sid=$SID&useajax=1&xhr=1&t1586064147210=nocache" | html2text | sed "s@\xA0@@g" | sed "s@\xC2@@g"  > /tmp/icinga-fritzbox-$HOST-channels_tx.html
 }
 
 if [ ! -s /tmp/icinga-fritzbox-$HOST-sid.txt ] || [ ! -s /tmp/icinga-fritzbox-$HOST-channels.html ] || [ ! -s /tmp/icinga-fritzbox-$HOST-general.json ]; then
@@ -22,39 +25,53 @@ if [ ! -s /tmp/icinga-fritzbox-$HOST-channels.html ] || [ ! -s /tmp/icinga-fritz
     fetch_docsis_data
 fi
 
-NUMDSCHANNELS=$(cat /tmp/icinga-fritzbox-$HOST-general.json | jq -r '.ds_count')
-NUMUSCHANNELS=$(cat /tmp/icinga-fritzbox-$HOST-general.json | jq -r '.us_count')
+MODEL=$(cat /tmp/icinga-fritzbox-192.168.178.1-data.json | jq -r '.data.fritzos.Productname')
 DOCSISVERSION=$(cat /tmp/icinga-fritzbox-$HOST-general.json | jq -rc '.stateTxt[] | select(contains("DOCSIS"))')
+MODELOFFSET=0
+
+if echo $MODEL | grep -q "6360"; then
+    MODELOFFSET=0
+    MAX_RX_CHANNELS=4
+    MAX_TX_CHANNELS=4
+elif echo $MODEL | grep -q "6591"; then
+    MODELOFFSET=1
+    MAX_RX_CHANNELS=32
+    MAX_TX_CHANNELS=8
+
+else
+    MODELOFFSET=0
+    status_unknown "UNKNOWN: $MODEL is not known to me. Please report an issue at https://github.com/nohn/monitoring-plugins_check_fritzbox_docsis_parameters/issues/new"
+fi
 
 # Thresholds for RX SNR MSE
-CRIT_LOWER[16]=30.1
-WARN_LOWER[16]=32.1
+CRIT_LOWER[16+$MODELOFFSET]=30.1
+WARN_LOWER[16+$MODELOFFSET]=32.1
 if echo $DOCSISVERSION | grep -q "DOCSIS 3.0"; then
     # Thresholds for RX Power Level in dB(mV)
     # In fact, these values depend on the QAM, using 256QAM
     # thresholds here. 64QAM is more tolerant...
-    CRIT_LOWER[15]=-7.9
-    WARN_LOWER[15]=-5.9
-    WARN_UPPER[15]=18
-    CRIT_UPPER[15]=20
+    CRIT_LOWER[15+$MODELOFFSET]=-7.9
+    WARN_LOWER[15+$MODELOFFSET]=-5.9
+    WARN_UPPER[15+$MODELOFFSET]=18
+    CRIT_UPPER[15+$MODELOFFSET]=20
     # Thresholds for TX Power Level in dB(mV)
-    CRIT_LOWER[32]=35.1
-    WARN_LOWER[32]=37.1
-    WARN_UPPER[32]=51
-    CRIT_UPPER[32]=53
+    CRIT_LOWER[32+$MODELOFFSET]=35.1
+    WARN_LOWER[32+$MODELOFFSET]=37.1
+    WARN_UPPER[32+$MODELOFFSET]=51
+    CRIT_UPPER[32+$MODELOFFSET]=53
 elif echo $DOCSISVERSION | grep -q "DOCSIS 3.1"; then
     # Thresholds for RX Power Level in dB(mV)
     # In fact, these values depend on the QAM, using 4096QAM
     # thresholds here. 2048QAM and 1024 QAM are more tolerant...
-    CRIT_LOWER[15]=-1.9
-    WARN_LOWER[15]=0.1
-    WARN_UPPER[15]=24
-    CRIT_UPPER[15]=26
+    CRIT_LOWER[15+$MODELOFFSET]=-1.9
+    WARN_LOWER[15+$MODELOFFSET]=0.1
+    WARN_UPPER[15+$MODELOFFSET]=24
+    CRIT_UPPER[15+$MODELOFFSET]=26
     # Thresholds for TX Power Level in dB(mV)
-    CRIT_LOWER[32]=38.1
-    WARN_LOWER[32]=40.1
-    WARN_UPPER[32]=48
-    CRIT_UPPER[32]=50
+    CRIT_LOWER[32+$MODELOFFSET]=38.1
+    WARN_LOWER[32+$MODELOFFSET]=40.1
+    WARN_UPPER[32+$MODELOFFSET]=48
+    CRIT_UPPER[32+$MODELOFFSET]=50
 else
     status_unknown "$DOCSISVERSION is unknown to me."
 fi
@@ -66,21 +83,21 @@ else
     PACKETLOSS="undefined"
 fi
 
-METRICS[12]="RX Channel"
-METRICS[13]="RX Frequency"
-METRICS[14]="RX Modulation QAM"
-METRICS[15]="RX Power Level"
-METRICS[16]="RX SNR MSE"
-METRICS[17]="RX Latency"
-METRICS[18]="RX Correctable Errors"
-METRICS[19]="RX Uncorrectable Errors"
-METRICS[28]="TX Channel"
-METRICS[29]="TX Frequency"
-METRICS[30]="TX Modulation QAM"
-METRICS[32]="TX Power Level"
+METRICS[12+$MODELOFFSET]="RX Channel"
+METRICS[13+$MODELOFFSET]="RX Frequency"
+METRICS[14+$MODELOFFSET]="RX Modulation QAM"
+METRICS[15+$MODELOFFSET]="RX Power Level"
+METRICS[16+$MODELOFFSET]="RX SNR MSE"
+METRICS[17+$MODELOFFSET]="RX Latency"
+METRICS[18+$MODELOFFSET]="RX Correctable Errors"
+METRICS[19+$MODELOFFSET]="RX Uncorrectable Errors"
+METRICS[28+$MODELOFFSET]="TX Channel"
+METRICS[29+$MODELOFFSET]="TX Frequency"
+METRICS[30+$MODELOFFSET]="TX Modulation QAM"
+METRICS[32+$MODELOFFSET]="TX Power Level"
 
-UNITS[18]=c
-UNITS[19]=c
+UNITS[18+$MODELOFFSET]=c
+UNITS[19+$MODELOFFSET]=c
 
 LINENUMBER=0;
 OUTPUT=""
@@ -94,6 +111,11 @@ while read -r LINE; do
     if [ ! -z "$METRIC" ]; then
         OUTPUT="$OUTPUT $METRIC:"
         IFS=" " read -r -a LINEARRAY <<< "$LINE"
+	if echo $METRIC | grep -q "RX"; then
+	    MAX_CHANNELS=$MAX_RX_CHANNELS
+	else
+	    MAX_CHANNELS=$MAX_TX_CHANNELS
+	fi
         for CHANNEL in $(seq 1 "$MAX_CHANNELS"); do
             CHANNELINDEX=$((CHANNEL-1))
             if [ "${LINEARRAY[$CHANNELINDEX]+isset}" ]; then
