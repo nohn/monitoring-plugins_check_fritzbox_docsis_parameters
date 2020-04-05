@@ -111,26 +111,34 @@ while read -r LINE; do
     if [ ! -z "$METRIC" ]; then
         OUTPUT="$OUTPUT $METRIC:"
         IFS=" " read -r -a LINEARRAY <<< "$LINE"
-	if echo "$METRIC" | grep -q "RX"; then
-	    MAX_CHANNELS=$MAX_RX_CHANNELS
-	else
-	    MAX_CHANNELS=$MAX_TX_CHANNELS
-	fi
+        if echo "$METRIC" | grep -q "RX"; then
+            MAX_CHANNELS=$MAX_RX_CHANNELS
+        else
+            MAX_CHANNELS=$MAX_TX_CHANNELS
+        fi
         for CHANNEL in $(seq 1 "$MAX_CHANNELS"); do
             CHANNELINDEX=$((CHANNEL-1))
             if [ "${LINEARRAY[$CHANNELINDEX]+isset}" ]; then
                 VALUE=$(echo "${LINEARRAY[$CHANNELINDEX]}" | grep -Eo "[0-9]*\.?[0-9]*" )
+                if [ "$DEBUG" == "true" ]; then
+                    echo "Metric: $METRIC"
+                    echo "Channel: $CHANNEL / $MAX_CHANNELS"
+                    echo "Channel: $CHANNEL"
+                    echo "Value: $VALUE"
+                    echo
+                fi
+
                 if [ "${CRIT_LOWER[$LINENUMBER]+isset}" ]   && lower   "${CRIT_LOWER[$LINENUMBER]}" "$VALUE"; then
-                    OUTPUT="$OUTPUT CRITICAL: Lower Limit ${CRIT_LOWER[$LINENUMBER]} is >> than"
+                    OUTPUT="$OUTPUT CRITICAL: Lower limit for $METRIC @ $CHANNEL ${CRIT_LOWER[$LINENUMBER]} is >> than"
                     CRITICAL=1
                 elif [ "${CRIT_UPPER[$LINENUMBER]+isset}" ] && greater "${CRIT_UPPER[$LINENUMBER]}" "$VALUE"; then
-                    OUTPUT="$OUTPUT CRITICAL: Upper Limit ${CRIT_UPPER[$LINENUMBER]} is << than"
+                    OUTPUT="$OUTPUT CRITICAL: Upper limit for $METRIC @ $CHANNEL ${CRIT_UPPER[$LINENUMBER]} is << than"
                     CRITICAL=1
                 elif [ "${WARN_LOWER[$LINENUMBER]+isset}" ] && lower   "${WARN_LOWER[$LINENUMBER]}" "$VALUE"; then
-                    OUTPUT="$OUTPUT WARNING: Lower Limit ${WARN_LOWER[$LINENUMBER]} is > than"
+                    OUTPUT="$OUTPUT WARNING: Lower limit for $METRIC @ $CHANNEL ${WARN_LOWER[$LINENUMBER]} is > than"
                     WARNING=1
                 elif [ "${WARN_UPPER[$LINENUMBER]+isset}" ] && greater "${WARN_UPPER[$LINENUMBER]}" "$VALUE"; then
-                    OUTPUT="$OUTPUT WARNING: Upper Limit ${WARN_UPPER[$LINENUMBER]} is < than"
+                    OUTPUT="$OUTPUT WARNING: Upper limit for $METRIC @ $CHANNEL ${WARN_UPPER[$LINENUMBER]} is < than"
                     WARNING=1
                 fi
             else
