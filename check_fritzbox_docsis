@@ -5,35 +5,35 @@
 
 fetch_docsis_data()
 {
-    curl -sk "https://$HOST/data.lua?sid=$SID&update=&xhr=1&t1540371669938=nocache" > /tmp/icinga-fritzbox-$HOST-data.json
-    curl -sk "https://$HOST/internet/docsis_overview.lua?sid=$SID&update=&xhr=1&t1540371669938=nocache" > /tmp/icinga-fritzbox-$HOST-general.json
-    curl -sk "https://$HOST/internet/docsis_info.lua?update=uiInfo&sid=$SID&xhr=1&t1537694807848=nocache" | html2text | sed "s@\xA0@@g" | sed "s@\xC2@@g"  > /tmp/icinga-fritzbox-$HOST-channels.html
+    curl -sk "https://$HOST/data.lua?sid=$SID&update=&xhr=1&t1540371669938=nocache" > /tmp/icinga-fritzbox-"$HOST"-data.json
+    curl -sk "https://$HOST/internet/docsis_overview.lua?sid=$SID&update=&xhr=1&t1540371669938=nocache" > /tmp/icinga-fritzbox-"$HOST"-general.json
+    curl -sk "https://$HOST/internet/docsis_info.lua?update=uiInfo&sid=$SID&xhr=1&t1537694807848=nocache" | html2text | sed "s@\xA0@@g" | sed "s@\xC2@@g"  > /tmp/icinga-fritzbox-"$HOST"-channels.html
     # curl -sk "https://$HOST/internet/docsis_info.lua?update=uiInfo_ds&sid=$SID&useajax=1&xhr=1&t1586064147210=nocache" | html2text | sed "s@\xA0@@g" | sed "s@\xC2@@g"  > /tmp/icinga-fritzbox-$HOST-channels_rx.html
     # curl -sk "https://$HOST/internet/docsis_info.lua?update=uiInfo_us&sid=$SID&useajax=1&xhr=1&t1586064147210=nocache" | html2text | sed "s@\xA0@@g" | sed "s@\xC2@@g"  > /tmp/icinga-fritzbox-$HOST-channels_tx.html
 }
 
-if [ ! -s /tmp/icinga-fritzbox-$HOST-sid.txt ] || [ ! -s /tmp/icinga-fritzbox-$HOST-channels.html ] || [ ! -s /tmp/icinga-fritzbox-$HOST-general.json ]; then
+if [ ! -s /tmp/icinga-fritzbox-"$HOST"-sid.txt ] || [ ! -s /tmp/icinga-fritzbox-"$HOST"-channels.html ] || [ ! -s /tmp/icinga-fritzbox-"$HOST"-general.json ]; then
     login
 else
-    SID=$(cat /tmp/icinga-fritzbox-$HOST-sid.txt)
+    SID=$(cat /tmp/icinga-fritzbox-"$HOST"-sid.txt)
 fi
 
 fetch_docsis_data
 
-if [ ! -s /tmp/icinga-fritzbox-$HOST-channels.html ] || [ ! -s /tmp/icinga-fritzbox-$HOST-general.json ]; then
+if [ ! -s /tmp/icinga-fritzbox-"$HOST"-channels.html ] || [ ! -s /tmp/icinga-fritzbox-"$HOST"-general.json ]; then
     login
     fetch_docsis_data
 fi
 
-MODEL=$(cat /tmp/icinga-fritzbox-192.168.178.1-data.json | jq -r '.data.fritzos.Productname')
-DOCSISVERSION=$(cat /tmp/icinga-fritzbox-$HOST-general.json | jq -rc '.stateTxt[] | select(contains("DOCSIS"))')
+MODEL=$(jq -r '.data.fritzos.Productname' < /tmp/icinga-fritzbox-192.168.178.1-data.json)
+DOCSISVERSION=$(jq -rc '.stateTxt[] | select(contains("DOCSIS"))' < /tmp/icinga-fritzbox-"$HOST"-general.json)
 MODELOFFSET=0
 
-if echo $MODEL | grep -q "6360"; then
+if echo "$MODEL" | grep -q "6360"; then
     MODELOFFSET=0
     MAX_RX_CHANNELS=4
     MAX_TX_CHANNELS=4
-elif echo $MODEL | grep -q "6591"; then
+elif echo "$MODEL" | grep -q "6591"; then
     MODELOFFSET=1
     MAX_RX_CHANNELS=32
     MAX_TX_CHANNELS=8
@@ -46,7 +46,7 @@ fi
 # Thresholds for RX SNR MSE
 CRIT_LOWER[16+$MODELOFFSET]=30.1
 WARN_LOWER[16+$MODELOFFSET]=32.1
-if echo $DOCSISVERSION | grep -q "DOCSIS 3.0"; then
+if echo "$DOCSISVERSION" | grep -q "DOCSIS 3.0"; then
     # Thresholds for RX Power Level in dB(mV)
     # In fact, these values depend on the QAM, using 256QAM
     # thresholds here. 64QAM is more tolerant...
@@ -59,7 +59,7 @@ if echo $DOCSISVERSION | grep -q "DOCSIS 3.0"; then
     WARN_LOWER[32+$MODELOFFSET]=37.1
     WARN_UPPER[32+$MODELOFFSET]=51
     CRIT_UPPER[32+$MODELOFFSET]=53
-elif echo $DOCSISVERSION | grep -q "DOCSIS 3.1"; then
+elif echo "$DOCSISVERSION" | grep -q "DOCSIS 3.1"; then
     # Thresholds for RX Power Level in dB(mV)
     # In fact, these values depend on the QAM, using 4096QAM
     # thresholds here. 2048QAM and 1024 QAM are more tolerant...
@@ -111,7 +111,7 @@ while read -r LINE; do
     if [ ! -z "$METRIC" ]; then
         OUTPUT="$OUTPUT $METRIC:"
         IFS=" " read -r -a LINEARRAY <<< "$LINE"
-	if echo $METRIC | grep -q "RX"; then
+	if echo "$METRIC" | grep -q "RX"; then
 	    MAX_CHANNELS=$MAX_RX_CHANNELS
 	else
 	    MAX_CHANNELS=$MAX_TX_CHANNELS
@@ -141,7 +141,7 @@ while read -r LINE; do
             CSV="$CSV;$VALUE"
         done
     fi
-done < /tmp/icinga-fritzbox-$HOST-channels.html
+done < /tmp/icinga-fritzbox-"$HOST"-channels.html
 
 echo "$OUTPUT |$PERFDATA"
 if [ ! -z "$CSVOUT" ]; then
