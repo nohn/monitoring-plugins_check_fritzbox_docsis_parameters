@@ -33,7 +33,12 @@ Icinga config could look like this:
     }
 
 ![Service Status Detail](docs/service-status.png)
+[![FOSSA Status](https://app.fossa.io/api/projects/git%2Bgithub.com%2Fnohn%2Fmonitoring-plugins_check_fritzbox_docsis_parameters.svg?type=shield)](https://app.fossa.io/projects/git%2Bgithub.com%2Fnohn%2Fmonitoring-plugins_check_fritzbox_docsis_parameters?ref=badge_shield)
 
 ![Availability Report](docs/availability-report.png)
 
 ![PNP4Nagios](docs/pnp4nagios.png)
+
+
+## License
+[![FOSSA Status](https://app.fossa.io/api/projects/git%2Bgithub.com%2Fnohn%2Fmonitoring-plugins_check_fritzbox_docsis_parameters.svg?type=large)](https://app.fossa.io/projects/git%2Bgithub.com%2Fnohn%2Fmonitoring-plugins_check_fritzbox_docsis_parameters?ref=badge_large)
