@@ -12,6 +12,11 @@ fetch_docsis_data()
     # curl -sk "https://$HOST/internet/docsis_info.lua?update=uiInfo_us&sid=$SID&useajax=1&xhr=1&t1586064147210=nocache" | html2text | sed "s@\xA0@@g" | sed "s@\xC2@@g"  > /tmp/icinga-fritzbox-$HOST-channels_tx.html
 }
 
+fetch_system_data()
+{
+    curl -sk https://$HOST/data.lua -d "xhr=1&sid=$SID&lang=de&page=ecoStat&xhrId=all&no_sidrenew" > /tmp/icinga-fritzbox-"$HOST"-system-data.json
+}
+
 if [ ! -s /tmp/icinga-fritzbox-"$HOST"-sid.txt ] || [ ! -s /tmp/icinga-fritzbox-"$HOST"-channels.html ] || [ ! -s /tmp/icinga-fritzbox-"$HOST"-general.json ]; then
     login
 else
@@ -25,7 +30,13 @@ if [ ! -s /tmp/icinga-fritzbox-"$HOST"-channels.html ] || [ ! -s /tmp/icinga-fri
     fetch_docsis_data
 fi
 
-MODEL=$(jq -r '.data.fritzos.Productname' < /tmp/icinga-fritzbox-192.168.178.1-data.json)
+fetch_system_data
+
+CPU_USAGE=$(jq -r '.data.cpuutil.series[0] | last' < /tmp/icinga-fritzbox-"$HOST"-system-data.json)
+RAM_FREE=$(jq -r '.data.ramusage.series[2] | last' < /tmp/icinga-fritzbox-"$HOST"-system-data.json)
+CPU_TEMP=$(jq -r '.data.cputemp.series[0] | last' < /tmp/icinga-fritzbox-"$HOST"-system-data.json)
+
+MODEL=$(jq -r '.data.fritzos.Productname' < /tmp/icinga-fritzbox-"$HOST"-data.json)
 DOCSISVERSION=$(jq -rc '.stateTxt[] | select(contains("DOCSIS"))' < /tmp/icinga-fritzbox-"$HOST"-general.json)
 MODELOFFSET=0
 
@@ -37,7 +48,6 @@ elif echo "$MODEL" | grep -q "6591"; then
     MODELOFFSET=1
     MAX_RX_CHANNELS=32
     MAX_TX_CHANNELS=8
-
 else
     MODELOFFSET=0
     status_unknown "UNKNOWN: $MODEL is not known to me. Please report an issue at https://github.com/nohn/monitoring-plugins_check_fritzbox_docsis_parameters/issues/new"
@@ -100,8 +110,8 @@ UNITS[18+$MODELOFFSET]=c
 UNITS[19+$MODELOFFSET]=c
 
 LINENUMBER=0;
-OUTPUT=""
-PERFDATA=""
+OUTPUT="CPU Usage: $CPU_USAGE%, CPU Temp: $CPU_TEMP°C, RAM Free: $RAM_FREE%"
+PERFDATA="'CPU Usage'=$CPU_USAGE% 'CPU Temp'=$CPU_TEMP 'RAM Free'=$RAM_FREE%"
 CSV=$(date -u +"%Y-%m-%dT%H:%M:%SZ")";$PACKETLOSS"
 CRITICAL=0
 WARNING=0
@@ -109,7 +119,7 @@ while read -r LINE; do
     LINENUMBER=$((LINENUMBER+1))
     METRIC=${METRICS[$LINENUMBER]}
     if [ ! -z "$METRIC" ]; then
-        OUTPUT="$OUTPUT $METRIC:"
+        OUTPUT="$OUTPUT\n$METRIC:"
         IFS=" " read -r -a LINEARRAY <<< "$LINE"
         if echo "$METRIC" | grep -q "RX"; then
             MAX_CHANNELS=$MAX_RX_CHANNELS
