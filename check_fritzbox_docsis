@@ -3,6 +3,9 @@
 . ./check_fritzbox.config.sh
 . ./check_fritzbox.functions.sh
 
+CRITICAL=0
+WARNING=0
+
 fetch_docsis_data()
 {
     curl -sk "https://$HOST/data.lua?sid=$SID&update=&xhr=1&t1540371669938=nocache" > /tmp/icinga-fritzbox-"$HOST"-data.json
@@ -35,6 +38,18 @@ fetch_system_data
 CPU_USAGE=$(jq -r '.data.cpuutil.series[0] | last' < /tmp/icinga-fritzbox-"$HOST"-system-data.json)
 RAM_FREE=$(jq -r '.data.ramusage.series[2] | last' < /tmp/icinga-fritzbox-"$HOST"-system-data.json)
 CPU_TEMP=$(jq -r '.data.cputemp.series[0] | last' < /tmp/icinga-fritzbox-"$HOST"-system-data.json)
+
+if lower "$RAM_FREE" 90; then
+    CRITICAL=1
+elif lower "$RAM_FREE" 80; then
+    WARNING=1
+fi
+
+if greater "$CPU_TEMP" 85; then
+    CRITICAL=1
+elif greater "$CPU_TEMP" 70; then
+    WARNING=1
+fi
 
 MODEL=$(jq -r '.data.fritzos.Productname' < /tmp/icinga-fritzbox-"$HOST"-data.json)
 DOCSISVERSION=$(jq -rc '.stateTxt[] | select(contains("DOCSIS"))' < /tmp/icinga-fritzbox-"$HOST"-general.json)
@@ -113,8 +128,6 @@ LINENUMBER=0;
 OUTPUT="CPU Usage: $CPU_USAGE%, CPU Temp: $CPU_TEMP°C, RAM Free: $RAM_FREE%"
 PERFDATA="'CPU Usage'=$CPU_USAGE% 'CPU Temp'=$CPU_TEMP 'RAM Free'=$RAM_FREE%"
 CSV=$(date -u +"%Y-%m-%dT%H:%M:%SZ")";$PACKETLOSS"
-CRITICAL=0
-WARNING=0
 while read -r LINE; do
     LINENUMBER=$((LINENUMBER+1))
     METRIC=${METRICS[$LINENUMBER]}
