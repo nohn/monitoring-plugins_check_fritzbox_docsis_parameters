@@ -37,17 +37,18 @@ fetch_system_data
 
 CPU_USAGE=$(jq -r '.data.cpuutil.series[0] | last' < /tmp/icinga-fritzbox-"$HOST"-system-data.json)
 RAM_FREE=$(jq -r '.data.ramusage.series[2] | last' < /tmp/icinga-fritzbox-"$HOST"-system-data.json)
+
 CPU_TEMP=$(jq -r '.data.cputemp.series[0] | last' < /tmp/icinga-fritzbox-"$HOST"-system-data.json)
 
-if lower "$RAM_FREE" 90; then
+if lower 10 "$RAM_FREE"; then
     CRITICAL=1
-elif lower "$RAM_FREE" 80; then
+elif lower 20 "$RAM_FREE"; then
     WARNING=1
 fi
 
-if greater "$CPU_TEMP" 85; then
+if greater 85 "$CPU_TEMP"; then
     CRITICAL=1
-elif greater "$CPU_TEMP" 70; then
+elif greater 70 "$CPU_TEMP"; then
     WARNING=1
 fi
 
